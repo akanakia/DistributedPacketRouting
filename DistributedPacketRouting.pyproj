@@ -24,6 +24,8 @@
   <ItemGroup>
     <Compile Include="DPR.py" />
     <Compile Include="DPRAgent.py" />
+    <Compile Include="DPRNetworkGraph.py" />
+    <Compile Include="DPRPacket.py" />
     <Compile Include="DPRRenderer.py" />
     <Compile Include="DPRSim.py" />
     <Compile Include="DPRTimingData.py" />
