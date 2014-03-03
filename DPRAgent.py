@@ -1,5 +1,5 @@
 import DPRTimingData as td
-import DPRPacket as pkt
+import DPRPacket as packet
 import networkx as nx
 import copy 
 
@@ -39,11 +39,9 @@ class DPRAgent:
             self.neighbor_list.index(recv_pkt.target_agent_id)
             return [recv_pkt.target_agent_id]
         except ValueError: 
-            # If not, forward to all neighbors except the one
-            # we received the messagefrom
-            fw_id_list = list(self.neighbor_list)
-            recvd_from = recv_pkt.prop_chain_ids[-2]
-            return fw_id_list.remove(recv_from)
+            # If not, forward to all neighbors except the ones who have already
+            # seen this message
+            return set(self.neighbor_list) - set(recv_pkt.prop_chain_ids)
 
     def should_I_fw_pkt(self, recv_pkt):
         """
@@ -65,8 +63,6 @@ class DPRAgent:
         Decides what to do with the packets in in_buf (forward or not) and
         moves them appropriately.
         """
-        self.out_buf = [] # Clear the out buffer
-        self.fw_id_lists = [] # Clear the list of forwarding id lists
         for recv_pkt in in_buf:
             if(should_I_fw_pkt(recv_pkt)):
                 self.out_buf.append(recv_pkt)
@@ -74,12 +70,19 @@ class DPRAgent:
             else:
                 process_pkt(recv_pkt)
 
+        self.in_buf = [] # Clear the in buffer after processing received packets
+
+    def create_and_send_pkt(self, target_agent_id):
+            new_pkt = packet.DPRPacket(self.my_id, target_agent_id)
+            self.out_buf.append(new_pkt)
+            self.fw_id_lists.append(set(self.neighbor_list))
+
     def tick(self):
         """
         Ticks off a second of time in the operation loop. If the loop time has
         run out then handle the packets received during this loop.
         """
         self.tdat.curr_op_loop_time += 1
-        if(self.tdat.curr_op_loop_time == self.tdat.op_loop_len):
+        if(self.tdat.curr_op_loop_time >= self.tdat.op_loop_len):
             self.tdat.curr_op_loop_time = 0
             self.handle_packets()

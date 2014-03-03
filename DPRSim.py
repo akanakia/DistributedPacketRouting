@@ -1,4 +1,6 @@
 import DPRAgent as agent
+import DPRPacket as packet
+import networkx as nx
 
 class DPRSim:
-    pass
+    __init__(self, 

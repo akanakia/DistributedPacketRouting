@@ -1,6 +1,6 @@
-import DPRSim as sim
-import DPRTimingData
+import DPRSim
+import DPRTimingData as TD
 import copy 
 
 def start():
-    pass
+    sim = DPRSim.DPRSim()
