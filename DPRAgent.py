@@ -1,5 +1,4 @@
-import DPRTimingData as td
-import DPRPacket as packet
+from DPRPacket import DPRPacket
 import networkx as nx
 import copy 
 
@@ -25,7 +24,6 @@ class DPRAgent:
         self.fw_id_lists = [] # Forwarding id lists
         
         self.my_id = my_id
-        self.agent_id_list = copy.deepcopy(agent_id_list)
 
         self.G = G # The networkx graph object that stores connectivity information
         self.neighbor_list = G.neighbors(my_id)
@@ -37,7 +35,7 @@ class DPRAgent:
         try: 
             # Check if the target is our neighbor
             self.neighbor_list.index(recv_pkt.target_agent_id)
-            return [recv_pkt.target_agent_id]
+            return set([recv_pkt.target_agent_id])
         except ValueError: 
             # If not, forward to all neighbors except the ones who have already
             # seen this message
@@ -52,7 +50,7 @@ class DPRAgent:
             retval = False
         return retval
 
-    def process_pkt(self, recv_pkt):
+    def process_pkt(self, recv_pkt, meant_for_me):
         """
         Processes all packets meant for this agent
         """
@@ -65,15 +63,19 @@ class DPRAgent:
         """
         for recv_pkt in in_buf:
             if(should_I_fw_pkt(recv_pkt)):
-                self.out_buf.append(recv_pkt)
-                self.fw_id_list.append(get_fw_id_list(recv_pkt))
+                fw_id_list = get_fw_id_list(recv_pkt)
+                if(fw_id_list): # Check if the forwarding list is empty
+                    self.out_buf.append(recv_pkt)
+                    self.fw_id_lists.append(fw_id_list)
+                else:
+                    process_pkt(recv_pkt, False)
             else:
-                process_pkt(recv_pkt)
+                process_pkt(recv_pkt, True)
 
         self.in_buf = [] # Clear the in buffer after processing received packets
 
     def create_and_send_pkt(self, target_agent_id):
-            new_pkt = packet.DPRPacket(self.my_id, target_agent_id)
+            new_pkt = DPRPacket(self.my_id, target_agent_id)
             self.out_buf.append(new_pkt)
             self.fw_id_lists.append(set(self.neighbor_list))
 
