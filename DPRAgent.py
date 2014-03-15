@@ -62,6 +62,7 @@ class DPRAgent:
         moves them appropriately.
         """
         for recv_pkt in in_buf:
+            # TODO: Remove duplicate messages in the input buffer
             if(should_I_fw_pkt(recv_pkt)):
                 fw_id_list = get_fw_id_list(recv_pkt)
                 if(fw_id_list): # Check if the forwarding list is empty
