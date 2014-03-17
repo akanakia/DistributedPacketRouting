@@ -1,6 +1,7 @@
-import DPRSim
+from DPRSim import DPRSim
 import DPRTimingData as TD
-import copy 
+import networkx as nx
 
-def start():
-    sim = DPRSim.DPRSim()
+def start(G):
+    
+    sim = DPRSim(G, randomize_timings = False)

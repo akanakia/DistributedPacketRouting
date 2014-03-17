@@ -28,12 +28,31 @@ class DPRSim:
         self.randomize_timings = randomize_timings
         if randomize_timings:
             # Randomize timing data if requested
-            randomize_timing_data()
+            self.randomize_timing_data()
         else:
-            set_timing_data(op_loop_len, start_offset, msg_process_time)
+            self.set_timing_data(op_loop_len, start_offset, msg_process_time, msg_transfer_time)
 
         # Create agent with these parameters
-        self.agents = {G.nodes()[i]: create_agent(G.nodes()[i], self.agent_timing_data[i]) for i in range(self.num_agents)}
+        self.agents = {G.nodes()[i]: self.create_agent(G.nodes()[i], self.agent_timing_data[i]) for i in range(self.num_agents)}
+
+        # Print init info
+        self.print_init_info()
+
+    def print_init_info(self):
+        """
+        Prints the initialization state of the simulator
+        """
+        print "================================================================"
+        print "Simulation Initilization Information\n"
+        print "NUMBER OF AGENTS = %d"%self.num_agents
+        print "TIME SINCE START = %d"%self.start_time
+        for agent_id in self.agents.keys():
+            print "\nAGENT [%s] (Started at %d):"%(str(self.agents[agent_id].my_id), self.start_time - self.agents[agent_id].tdat.start_offset)
+            print "\tOperation Loop Length       = %d"%self.agents[agent_id].tdat.op_loop_len
+            print "\tMessage Processing Time     = %d"%self.agents[agent_id].tdat.msg_process_time
+            print "\tCurrent Operation Loop Time = %d"%self.agents[agent_id].tdat.curr_op_loop_time
+            print "\tCurrent Operation Cycle     = %d"%self.agents[agent_id].tdat.curr_op_cycle
+        print "================================================================"
 
     def create_agent(self, new_agent_id, new_agent_timing_data):
         """
@@ -46,15 +65,15 @@ class DPRSim:
         """
         Randomizes all the timing information for agents
         """
-        self.op_loop_length = [int(random.random() * self.DEFAULT_max_op_loop_length) for i in range(self.num_agents)]
+        self.op_loop_len = [int(random.random() * self.DEFAULT_max_op_loop_length) for i in range(self.num_agents)]
         self.start_offset = [int(random.random() * self.DEFAULT_max_start_offset) for i in range(self.num_agents)]
         self.msg_process_time = [int(random.random() * self.DEFAULT_max_msg_process_time) for i in range(self.num_agents)]
         self.msg_transfer_time = [int(random.random() * self.DEFAULT_max_msg_transfer_time) for i in range(self.num_agents)]
 
-        self.agent_timing_data = [DPRTimingData(op_loop_len[i], start_offset[i], msg_process_time[i]) for i in range(self.num_agents)]
-        self.curr_time = max(start_offset)
+        self.agent_timing_data = [DPRTimingData(self.op_loop_len[i], self.start_offset[i], self.msg_process_time[i]) for i in range(self.num_agents)]
+        self.start_time = max(self.start_offset)
 
-    def set_timing_data(self, op_loop_length, start_offset, msg_process_time, msg_transfer_time):
+    def set_timing_data(self, op_loop_len, start_offset, msg_process_time, msg_transfer_time):
         """
         Sets initial timing information for agents.
         If user does not provide this information then defaults are used
@@ -62,45 +81,35 @@ class DPRSim:
          # Operation loop length for agents
         if op_loop_len is None:
             self.op_loop_len = [self.DEFAULT_op_loop_len] * self.num_agents
-
-        if type(op_loop_len) is not list:
+        elif type(op_loop_len) is not list:
             self.op_loop_len = [op_loop_len] * self.num_agents
 
         # Start offset for agents
         if start_offset is None:
             self.start_offset = [self.DEFAULT_start_offset] * self.num_agents
-
-        if type(start_offset) is not list:
+        elif type(start_offset) is not list:
             self.start_offset = [start_offset] * self.num_agents
 
         # Message processing time
         if msg_process_time is None:
             self.msg_process_time = [self.DEFAULT_msg_process_time] * self.num_agents
-
-        if type(msg_process_time) is not list:
+        elif type(msg_process_time) is not list:
             self.msg_process_time = [msg_process_time] * self.num_agents
            
         # Message transfer time between agents
         if msg_transfer_time is None:
             self.msg_transfer_time = [self.DEFAULT_msg_transfer_time] * self.num_agents
-
-        if type(msg_transfer_time) is not list:
+        elif type(msg_transfer_time) is not list:
             self.msg_transfer_time = [msg_transfer_time] * self.num_agents
 
+        # DEBUG
+        #print self.op_loop_len
+        #print self.start_offset
+        #print self.msg_process_time
+        #print self.msg_transfer_time
+
         self.agent_timing_data = [DPRTimingData(self.op_loop_len[i], self.start_offset[i], self.msg_process_time[i]) for i in range(self.num_agents)]
-        self.curr_time = max(start_offset)
-
-    def run(self, stopping_conds):
-        """
-        """
-        while(True):
-            self.curr_time += 1
-            for agent_id in self.G.nodes():
-                agents[agent_id].tick()
-
-            move_packets()
-
-            # Check stopping conditions here
+        self.start_time = max(self.start_offset)
 
     def move_packets(self):
         """
@@ -109,7 +118,7 @@ class DPRSim:
         the id of the receiving agent in the propogation chain and the time of 
         arrival at the receiving agent. 
         """
-        for agent in agents:
+        for agent in self.agents.itervalues():
             for i in len(agent.out_buf):
                 for fw_id in agent.fw_id_lists[i]:
                     transfer_pkt = copy.deepcopy(agent.out_buf[i])
@@ -122,3 +131,40 @@ class DPRSim:
             # after all messages have been sent
             agent.out_buf = []
             agent.fw_id_lists = []
+
+    def run(self, stop_conds, log_lvl = 1):
+        """
+        Runs the simulation till a stopping condition is met
+        PARAMETERS: 
+        stop_conds - A dictionary of stopping conditions. Possible key-value pairs, 
+            iter:n    - The number of iterations to run the simulation for
+            rcvd:True - Run till any target agent receives a packet. 
+                        Note that rcvd:False does nothing.
+        log_lvl    - A logging level to decide what data to output to file
+            Level    Agents    In Buffer    Out buffer    Imp Times    Pkt Info
+              1        Y          Y             Y            Y           Y
+              2        Y          Y             Y            Y           N
+              3        Y          N             N            Y           N
+        """
+        self.curr_time = self.start_time
+        while(True):
+            self.curr_time += 1
+            for agent_id in self.G.nodes():
+                self.agents[agent_id].tick()
+
+            self.move_packets()
+
+            # Check stopping conditions here
+            # Number of iterations
+            if self.curr_time > (stop_conds['iter'] + self.start_time):
+                break
+
+            # Packet reveived by any target agent
+            if stop_conds['rcvd']:
+                rcvd = False
+                for agent in self.agents.itervalues():
+                    if agent.pkt_rcvd:
+                        rcvd = True
+                        break
+                if rcvd:
+                    break

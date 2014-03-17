@@ -28,6 +28,10 @@ class DPRAgent:
         self.G = G # The networkx graph object that stores connectivity information
         self.neighbor_list = G.neighbors(my_id)
 
+        # Termination packet status flags
+        self.pkt_rcvd = False
+        self.pkt_term = False
+
     def get_fw_id_list(self, recv_pkt):
         """
         Computes the list of agent ids to forward this packet to
@@ -54,7 +58,10 @@ class DPRAgent:
         """
         Processes all packets meant for this agent
         """
-        pass
+        if meant_for_me:
+            self.pkt_rcvd = True # A packet targetted towards this agent has been received
+        else:
+            self.pkt_term = True # A packet tergetted towards another agent terminated here
 
     def handle_pkts(self):
         """
@@ -63,15 +70,15 @@ class DPRAgent:
         """
         for recv_pkt in in_buf:
             # TODO: Remove duplicate messages in the input buffer
-            if(should_I_fw_pkt(recv_pkt)):
-                fw_id_list = get_fw_id_list(recv_pkt)
+            if(self.should_I_fw_pkt(recv_pkt)):
+                fw_id_list = self.get_fw_id_list(recv_pkt)
                 if(fw_id_list): # Check if the forwarding list is empty
                     self.out_buf.append(recv_pkt)
                     self.fw_id_lists.append(fw_id_list)
                 else:
-                    process_pkt(recv_pkt, False)
+                    self.process_pkt(recv_pkt, False)
             else:
-                process_pkt(recv_pkt, True)
+                self.process_pkt(recv_pkt, True)
 
         self.in_buf = [] # Clear the in buffer after processing received packets
 
@@ -85,7 +92,11 @@ class DPRAgent:
         Ticks off a second of time in the operation loop. If the loop time has
         run out then handle the packets received during this loop.
         """
-        self.tdat.curr_op_loop_time += 1
         if(self.tdat.curr_op_loop_time >= self.tdat.op_loop_len):
             self.tdat.curr_op_loop_time = 0
+            self.tdat.curr_op_cycle += 1
             self.handle_packets()
+
+        self.pkt_rcvd = False
+        self.pkt_term = False
+        self.tdat.curr_op_loop_time += 1
