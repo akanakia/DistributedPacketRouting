@@ -72,6 +72,7 @@ class DPRSim:
 
         self.agent_timing_data = [DPRTimingData(self.op_loop_len[i], self.start_offset[i], self.msg_process_time[i]) for i in range(self.num_agents)]
         self.start_time = max(self.start_offset)
+        self.curr_time = self.start_time
 
     def set_timing_data(self, op_loop_len, start_offset, msg_process_time, msg_transfer_time):
         """
@@ -110,6 +111,7 @@ class DPRSim:
 
         self.agent_timing_data = [DPRTimingData(self.op_loop_len[i], self.start_offset[i], self.msg_process_time[i]) for i in range(self.num_agents)]
         self.start_time = max(self.start_offset)
+        self.curr_time = self.start_time
 
     def move_packets(self):
         """
@@ -138,15 +140,14 @@ class DPRSim:
         PARAMETERS: 
         stop_conds - A dictionary of stopping conditions. Possible key-value pairs, 
             iter:n    - The number of iterations to run the simulation for
-            rcvd:True - Run till any target agent receives a packet. 
-                        Note that rcvd:False does nothing.
+            recv:True - Run till any target agent receives a packet. 
+                        Note that recv:False does nothing.
         log_lvl    - A logging level to decide what data to output to file
             Level    Agents    In Buffer    Out buffer    Imp Times    Pkt Info
               1        Y          Y             Y            Y           Y
               2        Y          Y             Y            Y           N
               3        Y          N             N            Y           N
         """
-        self.curr_time = self.start_time
         while(True):
             self.curr_time += 1
             for agent in self.agents.itervalues():
@@ -155,24 +156,15 @@ class DPRSim:
             self.move_packets()
 
             # Check stopping conditions here
-            stop = False
             for cond in stop_conds:
                 # Number of iterations
                 if cond == 'iter':
                     if self.curr_time > (stop_conds['iter'] + self.start_time):
-                        stop = True
-                        break
+                        return
 
                 # Packet reveived by any target agent
-                if cond == 'rcvd':
-                    rcvd = False
-                    if stop_conds['rcvd']:
+                if cond == 'recv':
+                    if stop_conds['recv']:
                         for agent in self.agents.itervalues():
                             if agent.pkt_rcvd:
-                                rcvd = True
-                                break
-                        if rcvd:
-                            stop = True
-                            break
-            if stop:
-                break
+                                return

@@ -60,6 +60,14 @@ class DPRAgent:
         """
         if meant_for_me:
             self.pkt_rcvd = True # A packet targetted towards this agent has been received
+            print "************************************************************"
+            print "Packet Received by Agent [%s]"%str(self.my_id)
+            print "It was meant for Agent [%s]"%str(recv_pkt.target_agent_id)
+            print "Propogation chain for packet, "
+            print recv_pkt.prop_chain_ids
+            print "Transmission arrival times for packet, "
+            print recv_pkt.recv_global_timestamps
+            print "************************************************************\n"
         else:
             self.pkt_term = True # A packet tergetted towards another agent terminated here
 
@@ -68,7 +76,7 @@ class DPRAgent:
         Decides what to do with the packets in in_buf (forward or not) and
         moves them appropriately.
         """
-        for recv_pkt in in_buf:
+        for recv_pkt in self.in_buf:
             # TODO: Remove duplicate messages in the input buffer
             if(self.should_I_fw_pkt(recv_pkt)):
                 fw_id_list = self.get_fw_id_list(recv_pkt)
