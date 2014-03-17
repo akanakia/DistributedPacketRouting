@@ -1,6 +1,8 @@
 from DPRSim import DPRSim
-import DPRTimingData as TD
+from DPRTimingData import DPRTimingData
+
 import networkx as nx
+import matplotlib.pyplot
 
 def start(G):
     

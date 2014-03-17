@@ -46,12 +46,12 @@ class DPRSim:
         print "Simulation Initilization Information\n"
         print "NUMBER OF AGENTS = %d"%self.num_agents
         print "TIME SINCE START = %d"%self.start_time
-        for agent_id in self.agents.keys():
-            print "\nAGENT [%s] (Started at %d):"%(str(self.agents[agent_id].my_id), self.start_time - self.agents[agent_id].tdat.start_offset)
-            print "\tOperation Loop Length       = %d"%self.agents[agent_id].tdat.op_loop_len
-            print "\tMessage Processing Time     = %d"%self.agents[agent_id].tdat.msg_process_time
-            print "\tCurrent Operation Loop Time = %d"%self.agents[agent_id].tdat.curr_op_loop_time
-            print "\tCurrent Operation Cycle     = %d"%self.agents[agent_id].tdat.curr_op_cycle
+        for agent in self.agents.itervalues():
+            print "\nAGENT [%s] (Started at %d):"%(str(agent.my_id), self.start_time - agent.tdat.start_offset)
+            print "\tOperation Loop Length       = %d"%agent.tdat.op_loop_len
+            print "\tMessage Processing Time     = %d"%agent.tdat.msg_process_time
+            print "\tCurrent Operation Loop Time = %d"%agent.tdat.curr_op_loop_time
+            print "\tCurrent Operation Cycle     = %d"%agent.tdat.curr_op_cycle
         print "================================================================"
 
     def create_agent(self, new_agent_id, new_agent_timing_data):
@@ -119,7 +119,7 @@ class DPRSim:
         arrival at the receiving agent. 
         """
         for agent in self.agents.itervalues():
-            for i in len(agent.out_buf):
+            for i in range(len(agent.out_buf)):
                 for fw_id in agent.fw_id_lists[i]:
                     transfer_pkt = copy.deepcopy(agent.out_buf[i])
                     transfer_pkt.recv_local_timestamps.append(self.agents[fw_id].tdat.curr_op_loop_time)
@@ -149,22 +149,30 @@ class DPRSim:
         self.curr_time = self.start_time
         while(True):
             self.curr_time += 1
-            for agent_id in self.G.nodes():
-                self.agents[agent_id].tick()
+            for agent in self.agents.itervalues():
+                agent.tick()
 
             self.move_packets()
 
             # Check stopping conditions here
-            # Number of iterations
-            if self.curr_time > (stop_conds['iter'] + self.start_time):
-                break
-
-            # Packet reveived by any target agent
-            if stop_conds['rcvd']:
-                rcvd = False
-                for agent in self.agents.itervalues():
-                    if agent.pkt_rcvd:
-                        rcvd = True
+            stop = False
+            for cond in stop_conds:
+                # Number of iterations
+                if cond == 'iter':
+                    if self.curr_time > (stop_conds['iter'] + self.start_time):
+                        stop = True
                         break
-                if rcvd:
-                    break
+
+                # Packet reveived by any target agent
+                if cond == 'rcvd':
+                    rcvd = False
+                    if stop_conds['rcvd']:
+                        for agent in self.agents.itervalues():
+                            if agent.pkt_rcvd:
+                                rcvd = True
+                                break
+                        if rcvd:
+                            stop = True
+                            break
+            if stop:
+                break

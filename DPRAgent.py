@@ -95,7 +95,7 @@ class DPRAgent:
         if(self.tdat.curr_op_loop_time >= self.tdat.op_loop_len):
             self.tdat.curr_op_loop_time = 0
             self.tdat.curr_op_cycle += 1
-            self.handle_packets()
+            self.handle_pkts()
 
         self.pkt_rcvd = False
         self.pkt_term = False
